@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Submissions - Campus Lost & Found</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page-wrap">
+
+    <header class="site-header">
+      <div class="nav-inner">
+        <a class="logo" href="index.html">
+          <span class="logo-icon">🎒</span>
+          <span>Campus Lost &amp; Found</span>
+        </a>
+        <nav class="main-nav">
+          <a href="index.html">Home</a>
+          <a href="add.html">Add Item</a>
+          <a href="my-submissions.html">My Submissions</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container">
+      <h1 class="page-title">My Submissions</h1>
+
+      <!-- Login form -->
+      <div class="login-card" id="loginCard">
+        <p class="text-muted mb-16">Enter your nickname to view items you've posted. If you have an access code from when you posted, enter it too for a more precise match.</p>
+        <form id="loginForm" novalidate>
+          <div class="form-group">
+            <label for="loginNickname">Nickname *</label>
+            <input type="text" id="loginNickname" placeholder="e.g., Alex" maxlength="20">
+            <div class="field-error">Please enter your nickname</div>
+          </div>
+          <div class="form-group">
+            <label for="loginCode">Access Code (optional)</label>
+            <input type="text" id="loginCode" placeholder="6-character code from your posts" maxlength="6">
+            <div class="field-hint">Leave blank to see all items posted under this nickname.</div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">View My Items</button>
+        </form>
+      </div>
+
+      <!-- Submissions list -->
+      <div class="hidden" id="submissionsView">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
+          <p id="welcomeText" class="text-muted"></p>
+          <button class="btn btn-outline btn-sm" id="logoutBtn">Logout</button>
+        </div>
+
+        <div id="submissionsList"></div>
+
+        <div class="empty-state hidden" id="submissionsEmpty">
+          <div class="empty-icon">📭</div>
+          <p>You have not posted anything yet. <a href="add.html">Add an item</a></p>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-links">
+        <a href="#about">About</a>
+        <a href="mailto:lostfound@campus.edu">Contact</a>
+      </div>
+      <div>&copy; 2026 Campus Lost &amp; Found. Built for SD3 Web Application Development.</div>
+    </footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

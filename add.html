@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Item - Campus Lost & Found</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="page-wrap">
+
+    <header class="site-header">
+      <div class="nav-inner">
+        <a class="logo" href="index.html">
+          <span class="logo-icon">🎒</span>
+          <span>Campus Lost &amp; Found</span>
+        </a>
+        <nav class="main-nav">
+          <a href="index.html">Home</a>
+          <a href="add.html">Add Item</a>
+          <a href="my-submissions.html">My Submissions</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container">
+      <h1 class="page-title">Report a Lost or Found Item</h1>
+
+      <!-- Success message (shown after submission) -->
+      <div class="success-box hidden" id="successBox">
+        <h3>🎉 Item reported successfully!</h3>
+        <p>Save this code — you'll need it to mark the item as resolved later:</p>
+        <div class="code-display" id="successCode"></div>
+        <p>
+          <a id="viewItemLink" href="#">View your item</a> &middot;
+          <a href="index.html">Back to Home</a> &middot;
+          <a href="add.html">Report another item</a>
+        </p>
+      </div>
+
+      <form class="form-card" id="addItemForm" novalidate>
+
+        <!-- 1. Type selector -->
+        <div class="form-group">
+          <label>Type *</label>
+          <input type="hidden" id="itemType" value="lost">
+          <div class="type-selector">
+            <button type="button" class="type-btn lost active" data-type="lost">😟 Lost</button>
+            <button type="button" class="type-btn found" data-type="found">🙂 Found</button>
+          </div>
+        </div>
+
+        <!-- 2. Item name -->
+        <div class="form-group">
+          <label for="itemName">Item Name *</label>
+          <input type="text" id="itemName" placeholder="e.g., Black Backpack" maxlength="60">
+          <div class="field-error">Please enter an item name</div>
+        </div>
+
+        <!-- 3. Description -->
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea id="description" rows="3" placeholder="Describe unique features..." maxlength="500"></textarea>
+          <div class="char-counter" id="charCounter">0 / 500</div>
+        </div>
+
+        <!-- 4. Location -->
+        <div class="form-group">
+          <label for="locationSelect">Location *</label>
+          <select id="locationSelect">
+            <option value="">-- Select a location --</option>
+            <option value="Library 1st Floor">Library 1st Floor</option>
+            <option value="Library 2nd Floor">Library 2nd Floor</option>
+            <option value="Library 3rd Floor">Library 3rd Floor</option>
+            <option value="Student Center">Student Center</option>
+            <option value="Science Building">Science Building</option>
+            <option value="Engineering Hall">Engineering Hall</option>
+            <option value="Parking Lot A">Parking Lot A</option>
+            <option value="Parking Lot B">Parking Lot B</option>
+            <option value="Parking Lot C">Parking Lot C</option>
+            <option value="Bus Stop">Bus Stop</option>
+            <option value="Other">Other (please specify)</option>
+          </select>
+          <div class="field-error">Please select a location</div>
+        </div>
+
+        <div class="form-group hidden" id="otherLocationGroup">
+          <label for="otherLocation">Specify Location *</label>
+          <input type="text" id="otherLocation" placeholder="e.g., Cafeteria">
+          <div class="field-error">Please specify the location</div>
+        </div>
+
+        <!-- 5. Date -->
+        <div class="form-group">
+          <label for="dateLostFound">Date Lost / Found *</label>
+          <input type="date" id="dateLostFound">
+          <div class="field-error">Please select a date</div>
+        </div>
+
+        <!-- 6. Image upload -->
+        <div class="form-group">
+          <label for="imageInput">Image (optional, max 2MB)</label>
+          <div class="image-upload">
+            <input type="file" id="imageInput" accept="image/*">
+            <div class="field-hint">Image optional - you can submit without one</div>
+            <div class="field-error" id="imageError" style="display:block;"></div>
+            <div class="image-preview" id="imagePreview">
+              <img src="" alt="Preview">
+            </div>
+          </div>
+        </div>
+
+        <!-- 7. Contact info -->
+        <div class="form-group">
+          <label for="contact">Contact Info *</label>
+          <input type="text" id="contact" placeholder="email@example.com or 555-1234">
+          <div class="field-error">Please enter a valid email or phone number</div>
+        </div>
+
+        <!-- 8. Nickname -->
+        <div class="form-group">
+          <label for="nickname">Nickname *</label>
+          <input type="text" id="nickname" placeholder="How others will see you (e.g., Alex)" maxlength="20">
+          <div class="field-hint">Max 20 characters. This is shown publicly.</div>
+          <div class="field-error">Nickname required (shown to others)</div>
+        </div>
+
+        <!-- 9 & 10. Submit / Cancel -->
+        <div class="form-actions">
+          <button type="submit" class="btn btn-success btn-lg btn-block">Report Item</button>
+        </div>
+        <div class="form-actions">
+          <a href="index.html" class="btn btn-outline btn-block">Cancel</a>
+        </div>
+      </form>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-links">
+        <a href="#about">About</a>
+        <a href="mailto:lostfound@campus.edu">Contact</a>
+      </div>
+      <div>&copy; 2026 Campus Lost &amp; Found. Built for SD3 Web Application Development.</div>
+    </footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
