@@ -68,6 +68,7 @@ async function signUp(email, password, displayName) {
     password,
     options: {
       data: { display_name: displayName },
+      emailRedirectTo: window.location.origin + '/auth.html',
     },
   });
 }
