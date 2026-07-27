@@ -8,43 +8,12 @@
 const PAGE_SIZE      = 10;
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;  // 2 MB
 const MAX_DESCRIPTION = 500;
-const DRAFT_KEY      = 'lf_draft';
-const SESSION_KEY    = 'lf_session';
+const DRAFT_KEY = 'lf_draft';
 
 /* --------------------------------------------------
-   Supabase client
+   Supabase client (initialized by auth.js)
 -------------------------------------------------- */
 let db = null;
-
-function initSupabase() {
-  const unconfigured =
-    typeof SUPABASE_URL      === 'undefined' ||
-    typeof SUPABASE_ANON_KEY === 'undefined' ||
-    SUPABASE_URL      === 'YOUR_SUPABASE_URL_HERE' ||
-    SUPABASE_ANON_KEY === 'YOUR_SUPABASE_ANON_KEY_HERE';
-
-  if (unconfigured) {
-    showConfigError();
-    return false;
-  }
-
-  if (typeof window.supabase === 'undefined') {
-    showToast('Supabase SDK failed to load. Check your internet connection.');
-    return false;
-  }
-
-  db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  return true;
-}
-
-function showConfigError() {
-  const banner = document.createElement('div');
-  banner.style.cssText =
-    'background:#E74C3C;color:#fff;text-align:center;padding:14px 20px;font-weight:600;position:sticky;top:64px;z-index:99;';
-  banner.textContent =
-    '⚠️  Supabase not configured. Open supabase-config.js and paste your URL + anon key.';
-  document.body.insertBefore(banner, document.body.firstChild);
-}
 
 /* --------------------------------------------------
    DB layer — all async, returns plain JS objects
@@ -65,6 +34,7 @@ function rowToItem(r) {
     nickname:      r.nickname,
     status:        r.status,
     editCode:      r.edit_code,
+    userId:        r.user_id,
   };
 }
 
@@ -80,9 +50,10 @@ function itemToRow(item) {
     date_reported:  item.dateReported,
     image_base64:   item.imageBase64 || '',
     contact:        item.contact,
-    nickname:       item.nickname,
+    nickname:       item.nickname || '',
     status:         item.status || 'open',
-    edit_code:      item.editCode,
+    edit_code:      item.editCode || '',
+    user_id:        item.userId,
   };
 }
 
@@ -134,16 +105,14 @@ async function dbDeleteItem(id) {
   if (error) throw error;
 }
 
-async function dbFetchByNickname(nickname, code) {
-  let q = db
+async function dbFetchMyItems(authUserId) {
+  if (!authUserId) return [];
+  const { data, error } = await db
     .from('items')
     .select('*')
-    .ilike('nickname', nickname)
+    .eq('user_id', authUserId)
     .order('date_reported', { ascending: false });
 
-  if (code) q = q.eq('edit_code', code.toUpperCase());
-
-  const { data, error } = await q;
   if (error) throw error;
   return (data || []).map(rowToItem);
 }
@@ -153,11 +122,6 @@ async function dbFetchByNickname(nickname, code) {
 -------------------------------------------------- */
 function generateId() {
   return 'item_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
-}
-
-function generateCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
 function escapeHtml(str) {
@@ -367,6 +331,14 @@ function initAddPage() {
   const form = document.getElementById('addItemForm');
   if (!form) return;
 
+  // Auth guard — redirect to login if not authenticated
+  Promise.resolve().then(async () => {
+    const user = await requireAuth('add.html');
+    if (user) {
+      form.dataset.authUserId = user.id;
+    }
+  });
+
   const typeButtons      = document.querySelectorAll('.type-btn');
   const typeInput        = document.getElementById('itemType');
   const locationSelect   = document.getElementById('locationSelect');
@@ -434,7 +406,6 @@ function initAddPage() {
         otherLocation: otherLocInput.value,
         dateLostFound: dateInput.value,
         contact:       document.getElementById('contact').value,
-        nickname:      document.getElementById('nickname').value,
         imageBase64:   currentImageBase64,
       }));
     } catch(e) { /* ignore quota */ }
@@ -459,7 +430,6 @@ function initAddPage() {
     otherLocInput.value = d.otherLocation || '';
     if (d.dateLostFound) dateInput.value = d.dateLostFound;
     document.getElementById('contact').value  = d.contact  || '';
-    document.getElementById('nickname').value = d.nickname || '';
     if (d.imageBase64) {
       currentImageBase64 = d.imageBase64;
       imagePreview.querySelector('img').src = currentImageBase64;
@@ -473,6 +443,14 @@ function initAddPage() {
     e.preventDefault();
     clearErrors(form);
 
+    // Auth check (also handled by requireAuth above, but double-check)
+    const userId = form.dataset.authUserId;
+    if (!userId) {
+      showToast('Please sign in to report an item.');
+      window.location.href = 'auth.html?redirect=add.html';
+      return;
+    }
+
     let valid = true;
     const name        = document.getElementById('itemName').value.trim();
     const description = descInput.value.trim();
@@ -480,7 +458,6 @@ function initAddPage() {
     const otherLoc    = otherLocInput.value.trim();
     const dateLF      = dateInput.value;
     const contact     = document.getElementById('contact').value.trim();
-    const nickname    = document.getElementById('nickname').value.trim();
 
     if (!name)   { showFieldError('itemName', 'Please enter an item name'); valid = false; }
     if (!location) { showFieldError('locationSelect', 'Please select a location'); valid = false; }
@@ -492,8 +469,6 @@ function initAddPage() {
     if (!contact || !isValidContact(contact)) {
       showFieldError('contact', 'Please enter a valid email or phone number'); valid = false;
     }
-    if (!nickname) { showFieldError('nickname', 'Nickname required (shown to others)'); valid = false; }
-    else if (nickname.length > 20) { showFieldError('nickname', 'Max 20 characters'); valid = false; }
 
     if (!valid) return;
 
@@ -511,9 +486,10 @@ function initAddPage() {
       dateReported:  new Date().toISOString(),
       imageBase64:   currentImageBase64,
       contact,
-      nickname,
+      nickname:      '',
       status:        'open',
-      editCode:      generateCode(),
+      editCode:      '',
+      userId,
     };
 
     try {
@@ -521,7 +497,6 @@ function initAddPage() {
       localStorage.removeItem(DRAFT_KEY);
       form.classList.add('hidden');
       successBox.classList.remove('hidden');
-      document.getElementById('successCode').textContent = item.editCode;
       document.getElementById('viewItemLink').href = 'item.html?id=' + encodeURIComponent(item.id);
       successBox.scrollIntoView({ behavior: 'smooth' });
     } catch (err) {
@@ -550,7 +525,7 @@ async function initItemDetailsPage() {
 
   try {
     const item = await dbGetItemById(id);
-    renderItemDetails(item, container);
+    await renderItemDetails(item, container);
   } catch (err) {
     console.error(err);
     renderItemError(container);
@@ -566,7 +541,11 @@ function renderItemError(container) {
     </div>`;
 }
 
-function renderItemDetails(item, container) {
+async function renderItemDetails(item, container) {
+  const { session } = await getSession();
+  const isOwner = session?.user && item.userId === session.user.id;
+  const isLegacy = !item.userId;
+
   const badgeClass = item.type === 'lost' ? 'badge-lost' : 'badge-found';
   const badgeLabel = item.type === 'lost' ? 'Lost' : 'Found';
   const statusBadge = item.status === 'resolved'
@@ -581,6 +560,19 @@ function renderItemDetails(item, container) {
   const mailtoHref = contactIsEmail
     ? `mailto:${encodeURIComponent(item.contact)}?subject=${encodeURIComponent('Regarding ' + item.name)}`
     : '';
+
+  // Action buttons based on ownership
+  let ownerActions = '';
+  if (isOwner && item.status !== 'resolved') {
+    ownerActions = `
+      <button class="btn btn-success" id="resolveBtn">✅ Mark Resolved</button>
+      <button class="btn btn-danger" id="deleteBtn">🗑 Delete</button>`;
+  } else if (isLegacy) {
+    ownerActions = `
+      <div class="legacy-notice">
+        ℹ️ This item was posted before the auth system was introduced. Contact the poster using the info above.
+      </div>`;
+  }
 
   container.innerHTML = `
     <div class="detail-grid">
@@ -613,7 +605,7 @@ function renderItemDetails(item, container) {
         </div>
 
         <div class="contact-box">
-          <div><strong>Posted by:</strong> ${escapeHtml(item.nickname)}</div>
+          <div><strong>Posted by:</strong> ${escapeHtml(item.nickname || 'Unknown')}</div>
           <div><strong>Contact:</strong> ${escapeHtml(item.contact)}</div>
         </div>
 
@@ -628,11 +620,9 @@ function renderItemDetails(item, container) {
           <a class="btn btn-outline" href="index.html">⬅ Back to Home</a>
         </div>
 
-        <div class="form-actions">
+        <div class="form-actions" id="ownerActions">
           <button class="btn btn-outline" id="shareBtn">🔗 Copy Link</button>
-          ${item.status !== 'resolved'
-            ? `<button class="btn btn-success" id="resolveBtn">✅ Mark Resolved</button>`
-            : ''}
+          ${ownerActions}
         </div>
       </div>
     </div>
@@ -660,26 +650,40 @@ function renderItemDetails(item, container) {
     navigator.clipboard.writeText(window.location.href).then(() => showToast('Link copied!'));
   });
 
-  // Resolve
-  const resolveBtn = document.getElementById('resolveBtn');
-  if (resolveBtn) {
-    resolveBtn.addEventListener('click', async () => {
-      const code = prompt('Enter your 6-character item code to mark it resolved:');
-      if (code === null) return;
-      if (code.trim().toUpperCase() === (item.editCode || '').toUpperCase()) {
-        resolveBtn.disabled = true;
-        resolveBtn.textContent = 'Saving…';
-        try {
-          await dbUpdateStatus(item.id, 'resolved');
-          showToast('Item marked as resolved!');
-          renderItemDetails({ ...item, status: 'resolved' }, container);
-        } catch (err) {
-          showToast('Failed to update. Try again.');
-          resolveBtn.disabled = false;
-          resolveBtn.textContent = '✅ Mark Resolved';
-        }
-      } else {
-        showToast('Incorrect code. Nothing changed.');
+  // Resolve (only for owners)
+  const rBtn = document.getElementById('resolveBtn');
+  if (rBtn) {
+    rBtn.addEventListener('click', async () => {
+      if (!confirm('Mark this item as resolved?')) return;
+      rBtn.disabled = true;
+      rBtn.textContent = 'Saving…';
+      try {
+        await dbUpdateStatus(item.id, 'resolved');
+        showToast('Item marked as resolved!');
+        renderItemDetails({ ...item, status: 'resolved' }, container);
+      } catch (err) {
+        showToast('Failed to update. Try again.');
+        rBtn.disabled = false;
+        rBtn.textContent = '✅ Mark Resolved';
+      }
+    });
+  }
+
+  // Delete (only for owners)
+  const dBtn = document.getElementById('deleteBtn');
+  if (dBtn) {
+    dBtn.addEventListener('click', async () => {
+      if (!confirm('Are you sure? This cannot be undone.')) return;
+      dBtn.disabled = true;
+      dBtn.textContent = 'Deleting…';
+      try {
+        await dbDeleteItem(item.id);
+        showToast('Item deleted.');
+        container.innerHTML = `<div class="empty-state"><p>This item has been deleted.</p><a href="index.html" class="btn btn-primary mt-16">Back to Home</a></div>`;
+      } catch (err) {
+        showToast('Failed to delete. Try again.');
+        dBtn.disabled = false;
+        dBtn.textContent = '🗑 Delete';
       }
     });
   }
@@ -688,58 +692,80 @@ function renderItemDetails(item, container) {
 /* =====================================================================
    MY SUBMISSIONS PAGE
 ===================================================================== */
-function getSession() {
-  try { return JSON.parse(sessionStorage.getItem(SESSION_KEY)); } catch(e) { return null; }
-}
-function setSession(nickname, code) {
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify({ nickname, code }));
-}
-function clearSession() {
-  sessionStorage.removeItem(SESSION_KEY);
-}
 
-function initMySubmissionsPage() {
-  const loginCard      = document.getElementById('loginCard');
+async function initMySubmissionsPage() {
   const submissionsView = document.getElementById('submissionsView');
-  if (!loginCard) return;
+  if (!submissionsView) return;
 
-  const session = getSession();
-  if (session) {
-    loginCard.classList.add('hidden');
-    submissionsView.classList.remove('hidden');
-    document.getElementById('welcomeText').textContent = `Items posted by "${session.nickname}"`;
-    renderSubmissionsList(session.nickname, session.code);
+  // Auth guard
+  const user = await requireAuth('my-submissions.html');
+  if (!user) return;
+
+  // Welcome text from profile
+  const displayName = await getDisplayName(user.id) || user.email?.split('@')[0] || 'User';
+  document.getElementById('welcomeText').textContent = `Items posted by "${displayName}"`;
+  if (document.getElementById('loginCard')) {
+    document.getElementById('loginCard').classList.add('hidden');
   }
+  submissionsView.classList.remove('hidden');
 
-  document.getElementById('loginForm').addEventListener('submit', async e => {
-    e.preventDefault();
-    const nickname = document.getElementById('loginNickname').value.trim();
-    const code     = document.getElementById('loginCode').value.trim().toUpperCase();
-    if (!nickname) { showFieldError('loginNickname', 'Please enter your nickname'); return; }
-    document.getElementById('loginNickname').closest('.form-group').classList.remove('has-error');
-    setSession(nickname, code);
-    loginCard.classList.add('hidden');
-    submissionsView.classList.remove('hidden');
-    document.getElementById('welcomeText').textContent = `Items posted by "${nickname}"`;
-    await renderSubmissionsList(nickname, code);
+  await renderSubmissionsList(user.id);
+
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await signOut();
+    window.location.href = 'index.html';
   });
 
-  document.getElementById('logoutBtn').addEventListener('click', () => {
-    clearSession();
-    submissionsView.classList.add('hidden');
-    loginCard.classList.remove('hidden');
-    document.getElementById('loginForm').reset();
-  });
+  // Display name edit
+  const editNameBtn = document.getElementById('editNameBtn');
+  const displayNameEditDiv = document.getElementById('displayNameEdit');
+  const displayNameInput = document.getElementById('displayNameInput');
+  if (editNameBtn && displayNameEditDiv) {
+    editNameBtn.addEventListener('click', () => {
+      displayNameInput.value = displayName;
+      editNameBtn.style.display = 'none';
+      displayNameEditDiv.style.display = 'flex';
+      displayNameInput.focus();
+    });
+
+    document.getElementById('cancelDisplayNameBtn').addEventListener('click', () => {
+      displayNameEditDiv.style.display = 'none';
+      editNameBtn.style.display = '';
+    });
+
+    document.getElementById('saveDisplayNameBtn').addEventListener('click', async () => {
+      const newName = displayNameInput.value.trim();
+      if (!newName || newName.length > 30) {
+        showToast('Display name must be 1-30 characters.');
+        return;
+      }
+      try {
+        const { error } = await window._db
+          .from('profiles')
+          .update({ display_name: newName })
+          .eq('id', user.id);
+        if (error) throw error;
+        displayNameEditDiv.style.display = 'none';
+        editNameBtn.style.display = '';
+        document.getElementById('welcomeText').textContent = `Items posted by "${newName}"`;
+        await updateNavAuth(); // Update nav too
+        showToast('Display name updated!');
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to update display name.');
+      }
+    });
+  }
 }
 
-async function renderSubmissionsList(nickname, code) {
+async function renderSubmissionsList(authUserId) {
   const listEl  = document.getElementById('submissionsList');
   const emptyEl = document.getElementById('submissionsEmpty');
 
   listEl.innerHTML = '<div class="empty-state"><div class="spinner"></div><p>Loading…</p></div>';
 
   try {
-    const items = await dbFetchByNickname(nickname, code);
+    const items = await dbFetchMyItems(authUserId);
 
     if (items.length === 0) {
       listEl.innerHTML = '';
@@ -747,7 +773,7 @@ async function renderSubmissionsList(nickname, code) {
       return;
     }
     emptyEl.classList.add('hidden');
-    listEl.innerHTML = items.map(renderSubmissionRow).join('');
+    listEl.innerHTML = items.map(item => renderSubmissionRow(item, authUserId)).join('');
 
     listEl.querySelectorAll('.row-title').forEach(el =>
       el.addEventListener('click', () => {
@@ -762,8 +788,7 @@ async function renderSubmissionsList(nickname, code) {
         try {
           await dbDeleteItem(btn.dataset.id);
           showToast('Item deleted.');
-          const session = getSession();
-          await renderSubmissionsList(session.nickname, session.code);
+          await renderSubmissionsList(authUserId);
         } catch (err) {
           showToast('Failed to delete. Try again.');
           btn.disabled = false;
@@ -773,12 +798,12 @@ async function renderSubmissionsList(nickname, code) {
 
     listEl.querySelectorAll('.resolve-btn').forEach(btn =>
       btn.addEventListener('click', async () => {
+        if (!confirm('Mark this item as resolved?')) return;
         btn.disabled = true;
         try {
           await dbUpdateStatus(btn.dataset.id, 'resolved');
           showToast('Marked as resolved!');
-          const session = getSession();
-          await renderSubmissionsList(session.nickname, session.code);
+          await renderSubmissionsList(authUserId);
         } catch (err) {
           showToast('Failed to update. Try again.');
           btn.disabled = false;
@@ -824,9 +849,12 @@ function renderSubmissionRow(item) {
 document.addEventListener('DOMContentLoaded', async () => {
   highlightActiveNav();
   if (!initSupabase()) return;
+  db = window._db;
+  await initAuth();
+  await updateNavAuth();
 
   await initHomePage();
   initAddPage();
   await initItemDetailsPage();
-  initMySubmissionsPage();
+  await initMySubmissionsPage();
 });

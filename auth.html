@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In - Campus Lost & Found</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Full-page spinner shown while checking session (prevents flash) */
+    #pageLoader {
+      position: fixed; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg);
+      z-index: 9999;
+    }
+    #pageLoader .spinner { width: 44px; height: 44px; }
+    #pageLoader.hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="page-wrap">
+
+    <!-- Full-page loader (hidden after session check) -->
+    <div id="pageLoader"><div class="spinner"></div></div>
+
+    <header class="site-header">
+      <div class="nav-inner">
+        <a class="logo" href="index.html">
+          <span class="logo-icon">🎒</span>
+          <span>Campus Lost &amp; Found</span>
+        </a>
+        <nav class="main-nav">
+          <a href="index.html">Home</a>
+          <a href="add.html">Add Item</a>
+          <a href="my-submissions.html">My Submissions</a>
+          <span id="authNavItem"></span>
+        </nav>
+      </div>
+    </header>
+
+    <main class="container" id="mainContent" style="display:none;">
+      <div class="auth-card" id="authCard">
+
+        <!-- Tab switcher -->
+        <div class="auth-tabs">
+          <button class="auth-tab active" data-tab="signin">Sign In</button>
+          <button class="auth-tab" data-tab="signup">Sign Up</button>
+        </div>
+
+        <!-- Error message area -->
+        <div class="auth-error hidden" id="authError"></div>
+
+        <!-- Success message (shown after email signup if confirmation required) -->
+        <div class="auth-success hidden" id="authSuccess">
+          <h3>✅ Check your email</h3>
+          <p>A confirmation link has been sent. You can close this tab after confirming.</p>
+        </div>
+
+        <!-- Loading spinner -->
+        <div class="auth-loading hidden" id="authLoading">
+          <div class="spinner"></div>
+        </div>
+
+        <!-- ============ SIGN IN ============ -->
+        <div class="auth-form" id="signinForm">
+          <button class="btn btn-google btn-block" id="googleSignInBtn">
+            <svg class="google-icon" viewBox="0 0 48 48" width="20" height="20">
+              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+              <path fill="#FBBC05" d="M10.54 28.59A14.5 14.5 0 0 1 9.5 24c0-1.59.28-3.14.76-4.59l-7.98-6.19A23.99 23.99 0 0 0 0 24c0 3.77.87 7.35 2.56 10.56l7.98-5.97z"/>
+              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 5.97C6.51 42.62 14.62 48 24 48z"/>
+            </svg>
+            Continue with Google
+          </button>
+
+          <div class="auth-divider"><span>or sign in with email</span></div>
+
+          <form id="signinFormEl" novalidate>
+            <div class="form-group" id="signinEmailGroup">
+              <label for="signinEmail">Email</label>
+              <input type="email" id="signinEmail" placeholder="you@campus.edu">
+              <div class="field-error" id="signinEmailError">Please enter your email.</div>
+            </div>
+            <div class="form-group" id="signinPasswordGroup">
+              <label for="signinPassword">Password</label>
+              <input type="password" id="signinPassword" placeholder="Your password">
+              <div class="field-error" id="signinPasswordError">Please enter your password.</div>
+            </div>
+            <div style="text-align:right;margin-top:-10px;margin-bottom:14px;">
+              <a href="#" id="forgotPasswordLink" style="font-size:0.85rem;color:var(--text-light);">Forgot password?</a>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+          </form>
+
+          <p class="auth-switch-text">
+            Don't have an account? <a href="#" id="switchToSignup">Sign Up</a>
+          </p>
+        </div>
+
+        <!-- ============ SIGN UP ============ -->
+        <div class="auth-form hidden" id="signupForm">
+          <button class="btn btn-google btn-block" id="googleSignUpBtn">
+            <svg class="google-icon" viewBox="0 0 48 48" width="20" height="20">
+              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+              <path fill="#FBBC05" d="M10.54 28.59A14.5 14.5 0 0 1 9.5 24c0-1.59.28-3.14.76-4.59l-7.98-6.19A23.99 23.99 0 0 0 0 24c0 3.77.87 7.35 2.56 10.56l7.98-5.97z"/>
+              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 5.97C6.51 42.62 14.62 48 24 48z"/>
+            </svg>
+            Continue with Google
+          </button>
+
+          <div class="auth-divider"><span>or sign up with email</span></div>
+
+          <form id="signupFormEl" novalidate>
+            <div class="form-group" id="signupDisplayNameGroup">
+              <label for="signupDisplayName">Display Name</label>
+              <input type="text" id="signupDisplayName" placeholder="e.g., Alex" maxlength="30">
+              <div class="field-hint">This is shown publicly on your posts.</div>
+              <div class="field-error" id="signupDisplayNameError">Please enter a display name.</div>
+            </div>
+            <div class="form-group" id="signupEmailGroup">
+              <label for="signupEmail">Email</label>
+              <input type="email" id="signupEmail" placeholder="you@campus.edu">
+              <div class="field-error" id="signupEmailError">Please enter your email.</div>
+            </div>
+            <div class="form-group" id="signupPasswordGroup">
+              <label for="signupPassword">Password</label>
+              <input type="password" id="signupPassword" placeholder="At least 6 characters">
+              <div class="field-hint">Minimum 6 characters.</div>
+              <div class="field-error" id="signupPasswordError">Password must be at least 6 characters.</div>
+            </div>
+            <div class="form-group" id="signupConfirmGroup">
+              <label for="signupConfirm">Confirm Password</label>
+              <input type="password" id="signupConfirm" placeholder="Repeat your password">
+              <div class="field-error" id="signupConfirmError">Passwords do not match.</div>
+            </div>
+            <button type="submit" class="btn btn-success btn-block">Create Account</button>
+          </form>
+
+          <p class="auth-switch-text">
+            Already have an account? <a href="#" id="switchToSignin">Sign In</a>
+          </p>
+        </div>
+
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-links">
+        <a href="#about">About</a>
+        <a href="mailto:lostfound@campus.edu">Contact</a>
+      </div>
+      <div>&copy; 2026 Campus Lost &amp; Found. Built for SD3 Web Application Development.</div>
+    </footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="auth.js"></script>
+  <script>
+    /* =============================================
+       Auth page logic (standalone — no app.js dep)
+       ============================================= */
+
+    // Minimal escapeHtml (standalone copy for auth page)
+    function escHtml(str) {
+      if (str == null) return '';
+      return String(str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    // Active nav highlight
+    function highlightActive() {
+      const page = window.location.pathname.split('/').pop() || 'auth.html';
+      document.querySelectorAll('nav.main-nav a').forEach(a => {
+        a.classList.toggle('active', a.getAttribute('href') === page);
+      });
+    }
+
+    // Field error show/hide (matches style.css .has-error pattern)
+    function showFieldError(groupId, show) {
+      const group = document.getElementById(groupId);
+      if (!group) return;
+      if (show) group.classList.add('has-error');
+      else group.classList.remove('has-error');
+    }
+
+    function clearAllErrors() {
+      document.querySelectorAll('.form-group.has-error').forEach(g => g.classList.remove('has-error'));
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      highlightActive();
+      if (!initSupabase()) return;
+      await initAuth();
+
+      const mainContent    = document.getElementById('mainContent');
+      const pageLoader     = document.getElementById('pageLoader');
+      const card           = document.getElementById('authCard');
+      const tabs           = document.querySelectorAll('.auth-tab');
+      const signinFormDiv  = document.getElementById('signinForm');
+      const signupFormDiv  = document.getElementById('signupForm');
+      const authError      = document.getElementById('authError');
+      const authSuccess    = document.getElementById('authSuccess');
+      const authLoading    = document.getElementById('authLoading');
+
+      function showError(msg) {
+        authError.textContent = msg;
+        authError.classList.remove('hidden');
+      }
+
+      function clearError() {
+        authError.textContent = '';
+        authError.classList.add('hidden');
+      }
+
+      function showLoading(on) {
+        authLoading.classList.toggle('hidden', !on);
+        card.classList.toggle('auth-card-blur', on);
+      }
+
+      // ---- Session check + redirect (prevents page flash) ----
+      const { session } = await getSession();
+      if (session?.user) {
+        const redirect = sessionStorage.getItem('auth_redirect') || 'index.html';
+        sessionStorage.removeItem('auth_redirect');
+        window.location.href = redirect;
+        return;
+      }
+
+      // No session — show the auth card
+      await updateNavAuth();
+      pageLoader.classList.add('hidden');
+      mainContent.style.display = 'block';
+
+      // ---- Tab switching ----
+      function switchTab(tab) {
+        clearError();
+        clearAllErrors();
+        tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+        signinFormDiv.classList.toggle('hidden', tab !== 'signin');
+        signupFormDiv.classList.toggle('hidden', tab !== 'signup');
+      }
+
+      const mode = new URLSearchParams(window.location.search).get('mode');
+      if (mode === 'signup') switchTab('signup');
+
+      tabs.forEach(tab => tab.addEventListener('click', () => switchTab(tab.dataset.tab)));
+      document.getElementById('switchToSignup').addEventListener('click', e => { e.preventDefault(); switchTab('signup'); });
+      document.getElementById('switchToSignin').addEventListener('click', e => { e.preventDefault(); switchTab('signin'); });
+
+      // ---- Forgot Password ----
+      document.getElementById('forgotPasswordLink').addEventListener('click', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('signinEmail').value.trim();
+        if (!email) { showError('Enter your email address first, then click "Forgot password".'); return; }
+        showLoading(true);
+        const { error } = await window._db.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin + '/auth.html?mode=reset',
+        });
+        showLoading(false);
+        if (error) { showError(error.message); return; }
+        showError(''); // clear
+        authError.classList.add('hidden');
+        signinFormDiv.classList.add('hidden');
+        signupFormDiv.classList.add('hidden');
+        authSuccess.querySelector('h3').textContent = '📧 Check your email';
+        authSuccess.querySelector('p').textContent = 'A password reset link has been sent to ' + email;
+        authSuccess.classList.remove('hidden');
+      });
+
+      // ---- Google OAuth (with loading state) ----
+      function handleGoogleClick() {
+        clearError();
+        showLoading(true);
+        signInWithGoogle();
+        // The page will redirect, so loading stays on
+      }
+      document.getElementById('googleSignInBtn').addEventListener('click', handleGoogleClick);
+      document.getElementById('googleSignUpBtn').addEventListener('click', handleGoogleClick);
+
+      // ---- Sign In ----
+      document.getElementById('signinFormEl').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearError();
+        clearAllErrors();
+
+        const email    = document.getElementById('signinEmail').value.trim();
+        const password = document.getElementById('signinPassword').value;
+
+        let valid = true;
+        if (!email)      { showFieldError('signinEmailGroup', true); valid = false; }
+        if (!password)   { showFieldError('signinPasswordGroup', true); valid = false; }
+        if (!valid) return;
+
+        showLoading(true);
+        const { error } = await signIn(email, password);
+        showLoading(false);
+
+        if (error) {
+          if (error.message.includes('Invalid login credentials')) {
+            showError('Invalid email or password. Please try again.');
+          } else {
+            showError(error.message);
+          }
+          return;
+        }
+
+        const redirect = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
+        window.location.href = redirect;
+      });
+
+      // ---- Sign Up ----
+      document.getElementById('signupFormEl').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearError();
+        clearAllErrors();
+
+        const displayName = document.getElementById('signupDisplayName').value.trim();
+        const email       = document.getElementById('signupEmail').value.trim();
+        const password    = document.getElementById('signupPassword').value;
+        const confirm     = document.getElementById('signupConfirm').value;
+
+        let valid = true;
+        if (!displayName) { showFieldError('signupDisplayNameGroup', true); valid = false; }
+        if (!email)       { showFieldError('signupEmailGroup', true); valid = false; }
+        if (password.length < 6) { showFieldError('signupPasswordGroup', true); showError('Password must be at least 6 characters.'); valid = false; }
+        if (password !== confirm) { showFieldError('signupConfirmGroup', true); showError('Passwords do not match.'); valid = false; }
+        if (!valid) return;
+
+        showLoading(true);
+        const { data, error } = await signUp(email, password, displayName);
+        showLoading(false);
+
+        if (error) {
+          if (error.message.includes('already registered')) {
+            showError('This email is already registered. Try signing in instead.');
+          } else if (error.message.includes('weak_password')) {
+            showFieldError('signupPasswordGroup', true);
+            showError('Password is too weak. Choose a stronger password.');
+          } else {
+            showError(error.message);
+          }
+          return;
+        }
+
+        // Check if email confirmation is required
+        if (data?.user?.identities?.length === 0) {
+          showError('This email is already registered. Check your email for a confirmation link, or try signing in.');
+          return;
+        }
+
+        // If session exists immediately (confirmation disabled), redirect
+        const { session: newSession } = await getSession();
+        if (newSession?.user) {
+          const redirect = new URLSearchParams(window.location.search).get('redirect') || 'index.html';
+          window.location.href = redirect;
+        } else {
+          signinFormDiv.classList.add('hidden');
+          signupFormDiv.classList.add('hidden');
+          authSuccess.classList.remove('hidden');
+        }
+      });
+
+      // ---- Real-time validation on blur: remove error state on correction ----
+      document.querySelectorAll('#signinFormEl input, #signupFormEl input').forEach(input => {
+        input.addEventListener('blur', () => {
+          const group = input.closest('.form-group');
+          if (group && group.classList.contains('has-error') && input.value.trim()) {
+            group.classList.remove('has-error');
+          }
+        });
+        input.addEventListener('input', () => {
+          const group = input.closest('.form-group');
+          if (group && group.classList.contains('has-error') && input.value.trim()) {
+            group.classList.remove('has-error');
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

@@ -19,6 +19,7 @@
           <a href="index.html">Home</a>
           <a href="add.html">Add Item</a>
           <a href="my-submissions.html">My Submissions</a>
+          <span id="authNavItem"></span>
         </nav>
       </div>
     </header>
@@ -26,29 +27,27 @@
     <main class="container">
       <h1 class="page-title">My Submissions</h1>
 
-      <!-- Login form -->
-      <div class="login-card" id="loginCard">
-        <p class="text-muted mb-16">Enter your nickname to view items you've posted. If you have an access code from when you posted, enter it too for a more precise match.</p>
-        <form id="loginForm" novalidate>
-          <div class="form-group">
-            <label for="loginNickname">Nickname *</label>
-            <input type="text" id="loginNickname" placeholder="e.g., Alex" maxlength="20">
-            <div class="field-error">Please enter your nickname</div>
-          </div>
-          <div class="form-group">
-            <label for="loginCode">Access Code (optional)</label>
-            <input type="text" id="loginCode" placeholder="6-character code from your posts" maxlength="6">
-            <div class="field-hint">Leave blank to see all items posted under this nickname.</div>
-          </div>
-          <button type="submit" class="btn btn-primary btn-block">View My Items</button>
-        </form>
+      <!-- Auth gate — redirects to auth.html if not signed in -->
+      <div class="login-card hidden" id="loginCard">
+        <p class="text-muted mb-16">Please sign in to view your submissions.</p>
+        <a href="auth.html?redirect=my-submissions.html" class="btn btn-primary btn-block">Sign In</a>
       </div>
 
       <!-- Submissions list -->
       <div class="hidden" id="submissionsView">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
-          <p id="welcomeText" class="text-muted"></p>
-          <button class="btn btn-outline btn-sm" id="logoutBtn">Logout</button>
+          <div>
+            <p id="welcomeText" class="text-muted" style="margin:0;"></p>
+            <div id="displayNameEdit" style="display:none;margin-top:6px;gap:6px;align-items:center;flex-wrap:wrap;">
+              <input type="text" id="displayNameInput" maxlength="30" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.9rem;width:160px;">
+              <button class="btn btn-primary btn-sm" id="saveDisplayNameBtn">Save</button>
+              <button class="btn btn-outline btn-sm" id="cancelDisplayNameBtn">Cancel</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button class="btn btn-outline btn-sm" id="editNameBtn">✏️ Edit Name</button>
+            <button class="btn btn-outline btn-sm" id="logoutBtn">Logout</button>
+          </div>
         </div>
 
         <div id="submissionsList"></div>
@@ -71,6 +70,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <script src="auth.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

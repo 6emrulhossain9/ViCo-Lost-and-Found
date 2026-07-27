@@ -19,6 +19,7 @@
           <a href="index.html">Home</a>
           <a href="add.html">Add Item</a>
           <a href="my-submissions.html">My Submissions</a>
+          <span id="authNavItem"></span>
         </nav>
       </div>
     </header>
@@ -29,8 +30,7 @@
       <!-- Success message (shown after submission) -->
       <div class="success-box hidden" id="successBox">
         <h3>🎉 Item reported successfully!</h3>
-        <p>Save this code — you'll need it to mark the item as resolved later:</p>
-        <div class="code-display" id="successCode"></div>
+        <p>You can manage this item from <a href="my-submissions.html">My Submissions</a>.</p>
         <p>
           <a id="viewItemLink" href="#">View your item</a> &middot;
           <a href="index.html">Back to Home</a> &middot;
@@ -117,15 +117,7 @@
           <div class="field-error">Please enter a valid email or phone number</div>
         </div>
 
-        <!-- 8. Nickname -->
-        <div class="form-group">
-          <label for="nickname">Nickname *</label>
-          <input type="text" id="nickname" placeholder="How others will see you (e.g., Alex)" maxlength="20">
-          <div class="field-hint">Max 20 characters. This is shown publicly.</div>
-          <div class="field-error">Nickname required (shown to others)</div>
-        </div>
-
-        <!-- 9 & 10. Submit / Cancel -->
+        <!-- 9. Submit -->
         <div class="form-actions">
           <button type="submit" class="btn btn-success btn-lg btn-block">Report Item</button>
         </div>
@@ -146,6 +138,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
+  <script src="auth.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
