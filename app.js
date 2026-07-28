@@ -59,6 +59,7 @@ function itemToRow(item) {
 }
 
 async function dbFetchItems({ filter = 'all', search = '', sort = 'newest', page = 0 } = {}) {
+  if (!db) { throw new Error('Supabase not initialized. Check supabase-config.js credentials.'); }
   let q = db.from('items').select('*', { count: 'exact' });
 
   // Hide resolved items on home browse
@@ -89,7 +90,8 @@ async function dbGetItemById(id) {
 }
 
 async function dbInsertItem(item) {
-  const { error } = await db.from('items').insert(itemToRow(item));
+  if (!db) { throw new Error('Supabase not initialized. Check supabase-config.js credentials.'); }
+  const { data, error } = await db.from('items').insert(itemToRow(item)).select();
   if (error) throw error;
 }
 
@@ -350,7 +352,7 @@ async function renderHomeGrid(replace = true) {
 
   } catch (err) {
     console.error(err);
-    showToast('Failed to load items. Check your connection.');
+    showToast('Failed to load items. ' + (err.message || 'Check your connection.'));
   }
 }
 
@@ -552,7 +554,7 @@ function initAddPage() {
       successBox.scrollIntoView({ behavior: 'smooth' });
     } catch (err) {
       console.error(err);
-      showToast('Failed to submit. Check your connection and try again.');
+      showToast('Failed to submit. ' + (err.message || 'Check your connection.'));
       submitBtn.disabled    = false;
       submitBtn.textContent = 'Report Item';
     }
