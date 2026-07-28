@@ -385,10 +385,15 @@ function initAddPage() {
   if (!form) return;
 
   // Auth guard — redirect to login if not authenticated
+  let currentDisplayName = '';
+
   Promise.resolve().then(async () => {
     const user = await requireAuth('add.html');
     if (user) {
       form.dataset.authUserId = user.id;
+      // Fetch display name for privacy toggle
+      const name = await getDisplayName(user.id);
+      currentDisplayName = name || user.email?.split('@')[0] || 'User';
     }
   });
 
@@ -539,7 +544,7 @@ function initAddPage() {
       dateReported:  new Date().toISOString(),
       imageBase64:   currentImageBase64,
       contact,
-      nickname:      '',
+      nickname:      document.getElementById('showNameToggle').checked ? currentDisplayName : 'Anonymous',
       status:        'open',
       editCode:      '',
       userId,
@@ -609,6 +614,7 @@ async function renderItemDetails(item, container) {
     ? `<div class="detail-image-wrap" id="imageWrap"><img src="${item.imageBase64}" alt="${escapeHtml(item.name)}"></div>`
     : `<div class="detail-image-wrap placeholder">📦</div>`;
 
+  const isSignedIn = !!session?.user;
   const contactIsEmail = isEmail(item.contact);
   const mailtoHref = contactIsEmail
     ? `mailto:${encodeURIComponent(item.contact)}?subject=${encodeURIComponent('Regarding ' + item.name)}`
@@ -657,9 +663,9 @@ async function renderItemDetails(item, container) {
           </div>
         </div>
 
-        <div class="contact-box">
+        <div class="contact-box" style="${isSignedIn ? '' : 'position:relative;overflow:hidden;'}">
           <div><strong>Posted by:</strong> ${escapeHtml(item.nickname || 'Unknown')}</div>
-          <div><strong>Contact:</strong> ${escapeHtml(item.contact)}</div>
+          <div><strong>Contact:</strong> ${isSignedIn ? escapeHtml(item.contact) : '<span style="filter:blur(4px);cursor:pointer;user-select:none;" onclick="window.location.href=\'auth.html?redirect=' + encodeURIComponent(window.location.pathname + window.location.search) + '\'">' + escapeHtml(item.contact) + '</span> <span style="font-size:0.8rem;color:var(--lost);">🔒 Sign in to view</span>'}</div>
         </div>
 
         <div class="warning-box">
@@ -667,9 +673,11 @@ async function renderItemDetails(item, container) {
         </div>
 
         <div class="form-actions">
-          ${contactIsEmail
-            ? `<a class="btn btn-primary" href="${mailtoHref}">✉️ Contact via Email</a>`
-            : `<button class="btn btn-primary" id="copyContactBtn">📋 Copy Contact Info</button>`}
+          ${isSignedIn
+            ? (contactIsEmail
+              ? `<a class="btn btn-primary" href="${mailtoHref}">✉️ Contact via Email</a>`
+              : `<button class="btn btn-primary" id="copyContactBtn">📋 Copy Contact Info</button>`)
+            : `<a class="btn btn-primary" href="auth.html?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}">🔒 Sign in to View Contact</a>`}
           <a class="btn btn-outline" href="index.html">⬅ Back to Home</a>
         </div>
 
