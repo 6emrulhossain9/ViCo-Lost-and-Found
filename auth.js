@@ -166,3 +166,51 @@ async function updateNavAuth() {
     container.innerHTML = '<a href="auth.html">Sign In</a>';
   }
 }
+
+/* --------------------------------------------------
+   Theme (dark/light mode) — defined in auth.js so
+   available on auth.html (which doesn't load app.js)
+   -------------------------------------------------- */
+const THEME_KEY = 'lf_theme';
+
+function initTheme() {
+  try {
+    const theme = localStorage.getItem(THEME_KEY) || 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch(e) {
+    // localStorage unavailable (private browsing) — stick with light
+  }
+  updateThemeToggleUI();
+}
+
+function getTheme() {
+  try {
+    return localStorage.getItem(THEME_KEY) || 'light';
+  } catch(e) {
+    return 'light';
+  }
+}
+
+function setTheme(theme) {
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+  } catch(e) {
+    // localStorage unavailable
+  }
+  document.documentElement.classList.add('theme-transitioning');
+  document.documentElement.setAttribute('data-theme', theme);
+  updateThemeToggleUI();
+  setTimeout(() => document.documentElement.classList.remove('theme-transitioning'), 350);
+}
+
+function toggleTheme() {
+  setTheme(getTheme() === 'dark' ? 'light' : 'dark');
+}
+
+function updateThemeToggleUI() {
+  const btn = document.getElementById('themeToggle');
+  if (!btn) return;
+  const isDark = getTheme() === 'dark';
+  btn.textContent = isDark ? '☀️' : '🌙';
+  btn.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+}

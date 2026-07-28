@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sign In - Campus Lost & Found</title>
   <link rel="stylesheet" href="style.css">
+  <script>
+    (function(){try{var t=localStorage.getItem('lf_theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
+  </script>
   <style>
     /* Full-page spinner shown while checking session (prevents flash) */
     #pageLoader {
@@ -34,6 +37,7 @@
           <a href="add.html">Add Item</a>
           <a href="my-submissions.html">My Submissions</a>
           <span id="authNavItem"></span>
+          <button id="themeToggle" class="theme-toggle" aria-label="Toggle dark mode" onclick="toggleTheme()">🌙</button>
         </nav>
       </div>
     </header>
@@ -191,6 +195,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', async () => {
+      initTheme();
       highlightActive();
       if (!initSupabase()) return;
       await initAuth();

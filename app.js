@@ -9,6 +9,7 @@ const PAGE_SIZE      = 10;
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;  // 2 MB
 const MAX_DESCRIPTION = 500;
 const DRAFT_KEY = 'lf_draft';
+const VIEW_KEY  = 'lf_view';
 
 /* --------------------------------------------------
    Supabase client (initialized by auth.js)
@@ -178,6 +179,42 @@ function debounce(fn, ms) {
   };
 }
 
+/* --------------------------------------------------
+   View toggle (grid / list)
+   -------------------------------------------------- */
+function initViewToggle() {
+  try {
+    const mode = localStorage.getItem(VIEW_KEY) || 'grid';
+    applyViewMode(mode);
+  } catch(e) {
+    applyViewMode('grid');
+  }
+}
+
+function applyViewMode(mode) {
+  const grid = document.getElementById('itemsGrid');
+  if (grid) {
+    grid.classList.toggle('list-view', mode === 'list');
+  }
+  const btn = document.getElementById('viewToggleBtn');
+  if (btn) {
+    btn.innerHTML = mode === 'grid' ? '⊞ Grid' : '☰ List';
+    btn.setAttribute('aria-label', mode === 'grid' ? 'Switch to grid view' : 'Switch to list view');
+  }
+}
+
+function toggleView() {
+  let current = 'grid';
+  try {
+    current = localStorage.getItem(VIEW_KEY) || 'grid';
+  } catch(e) {}
+  const next = current === 'grid' ? 'list' : 'grid';
+  try {
+    localStorage.setItem(VIEW_KEY, next);
+  } catch(e) {}
+  applyViewMode(next);
+}
+
 function showFieldError(inputId, msg) {
   const el = document.getElementById(inputId);
   if (!el) return;
@@ -286,6 +323,20 @@ async function renderHomeGrid(replace = true) {
 
     if (replace) grid.innerHTML = '';
     grid.insertAdjacentHTML('beforeend', items.map(renderCard).join(''));
+
+    // Staggered card entrance animation on fresh renders
+    if (replace) {
+      grid.querySelectorAll('.card').forEach((card, i) => {
+        card.style.animationDelay = `${i * 0.06}s`;
+      });
+    }
+
+    // Apply current view mode after rendering
+    try {
+      applyViewMode(localStorage.getItem(VIEW_KEY) || 'grid');
+    } catch(e) {
+      applyViewMode('grid');
+    }
 
     const loadedSoFar = (homeState.page + 1) * PAGE_SIZE;
     loadMoreBtn.classList.toggle('hidden', loadedSoFar >= total);
@@ -847,7 +898,12 @@ function renderSubmissionRow(item) {
    INIT
 ===================================================================== */
 document.addEventListener('DOMContentLoaded', async () => {
+  initTheme();
   highlightActiveNav();
+
+  // Set up view toggle early (doesn't need Supabase)
+  initViewToggle();
+
   if (!initSupabase()) return;
   db = window._db;
   await initAuth();
